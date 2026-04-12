@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Isolated 3D Face Avatar</title>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <style>
+    body, html {
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background-color: #202020; /* Dark background matching the theme */
+    }
+    
+    #avatar {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+    }
+    
+    /* Optional testing overlay - hidden by default unless you want a quick play button */
+    #test-controls {
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+      z-index: 100;
+      background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px;
+      font-family: sans-serif; display: flex; gap: 10px;
+    }
+    input[type=file]::-webkit-file-upload-button {
+      background: #88ccff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;
+    }
+  </style>
+
+  <!-- Module Maps exactly as required by TalkingHead -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js/+esm",
+      "three/examples/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Clean, exact rendering container -->
+  <div id="avatar"></div>
+  
+  <!-- A minimal hidden upload button to quickly test audio lip sync -->
+  <div id="test-controls">
+    <input type="file" id="audio-upload" accept="audio/*">
+  </div>
+
+  <script type="module">
+    import { TalkingHead } from "./modules/talkinghead.mjs";
+
+    // Initialize only the core Face module
+    const node = document.getElementById('avatar');
+    
+    const head = new TalkingHead(node, {
+      // We removed cameraView: "head" because the stripped body breaks automatic bounding box calculations.
+      // We will set explicit coordinates below.
+    });
+    
+    async function init() {
+      // Show exactly the avatar you perfected using your edit_ultimate.mjs scripts!
+      await head.showAvatar({
+        url: './avatars/avatarsdk.glb',
+        body: 'M',
+        lipsyncLang: 'en',
+        avatarMood: 'neutral'
+      });
+      
+      // Since we stripped the body, the automatic 'head' framing calculates
+      // the wrong bounds! We must manually aim the camera at the head's height.
+      // Usually, avatar heads are at Y: 1.6 to 1.7 meters.
+      if (head.cameraCenter) {
+        head.cameraCenter = [0, 1.65, 0];
+      }
+      
+      head.cameraDistance = 0.55; 
+
+      // By NOT calling setCameraView('head'), we prevent it from overriding our absolute positions.
+
+      // Expose globally so you can integrate it perfectly with your other scripts!
+      window.head = head;
+      console.log("Isolated 3D Face successfully initialized and ready for TTS integration.");
+    }
+
+    init();
+
+    // ----------------------------------------------------
+    // Simple helper so you can instantly upload an audio file
+    // and watch your 3D Face speak, proving integration works!
+    // ----------------------------------------------------
+    document.getElementById('audio-upload').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const arrayBuffer = e.target.result;
+                // This is how you drive the 3D Face natively with audio buffers!
+                if(window.head) {
+                   window.head.speakAudio(arrayBuffer);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    });
+
+  </script>
+</body>
+</html>
