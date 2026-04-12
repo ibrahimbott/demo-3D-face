@@ -46,68 +46,58 @@
   <!-- Clean, exact rendering container -->
   <div id="avatar"></div>
   
-  <!-- A minimal hidden upload button to quickly test audio lip sync -->
   <div id="test-controls">
-    <input type="file" id="audio-upload" accept="audio/*">
+    <button id="test-btn" disabled>Loading Frame...</button>
+    <!-- Hidden input for local test files but keeping focus on URL driven approach as requested -->
+    <input type="file" id="audio-upload" accept="audio/*" style="display:none;">
+    <button id="upload-btn" disabled>Or Upload File</button>
   </div>
 
   <script type="module">
-    import { TalkingHead } from "./modules/talkinghead.mjs";
+    // Import the newly created clean API
+    import { AvatarController } from "./AvatarController.js";
 
-    // Initialize only the core Face module
+    // Grab the container
     const node = document.getElementById('avatar');
     
-    const head = new TalkingHead(node, {
-      // We removed cameraView: "head" because the stripped body breaks automatic bounding box calculations.
-      // We will set explicit coordinates below.
-    });
+    // Initialize our clean API Controller
+    const avatar = new AvatarController();
     
-    async function init() {
-      // Show exactly the avatar you perfected using your edit_ultimate.mjs scripts!
-      await head.showAvatar({
-        url: './avatars/avatarsdk.glb',
-        body: 'M',
-        lipsyncLang: 'en',
-        avatarMood: 'neutral'
-      });
-      
-      // Since we stripped the body, the automatic 'head' framing calculates
-      // the wrong bounds! We must manually aim the camera at the head's height.
-      // Usually, avatar heads are at Y: 1.6 to 1.7 meters.
-      if (head.cameraCenter) {
-        head.cameraCenter = [0, 1.65, 0];
-      }
-      
-      head.cameraDistance = 0.55; 
+    avatar.initialize(node).then(() => {
+        // Enable buttons once loaded
+        const btn = document.getElementById('test-btn');
+        const uploadBtn = document.getElementById('upload-btn');
+        btn.innerText = "Play Dummy Audio URL";
+        btn.disabled = false;
+        uploadBtn.disabled = false;
 
-      // By NOT calling setCameraView('head'), we prevent it from overriding our absolute positions.
+        // Dummy Test Link Approach As Requested
+        btn.addEventListener('click', () => {
+            btn.innerText = "Playing...";
+            btn.disabled = true;
+            
+            // Example dummy URL (replace with actual TTS generation endpoint)
+            // Note: In real life you'll pass the URL of your TTS bucket or generation output here.
+            // Using a standard free TTS generated file for testing:
+            const testAudioUrl = "https://actions.google.com/sounds/v1/speech/test_tone.ogg"; 
+            
+            avatar.speakFromUrl(testAudioUrl).then(() => {
+                btn.innerText = "Play Dummy Audio URL";
+                btn.disabled = false;
+            });
+        });
 
-      // Expose globally so you can integrate it perfectly with your other scripts!
-      window.head = head;
-      console.log("Isolated 3D Face successfully initialized and ready for TTS integration.");
-    }
-
-    init();
-
-    // ----------------------------------------------------
-    // Simple helper so you can instantly upload an audio file
-    // and watch your 3D Face speak, proving integration works!
-    // ----------------------------------------------------
-    document.getElementById('audio-upload').addEventListener('change', function(event) {
-        const file = event.target.files[0];
-        if(file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const arrayBuffer = e.target.result;
-                // This is how you drive the 3D Face natively with audio buffers!
-                if(window.head) {
-                   window.head.speakAudio(arrayBuffer);
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
+        // Keeping upload purely for backup convenience
+        uploadBtn.addEventListener('click', () => document.getElementById('audio-upload').click());
+        document.getElementById('audio-upload').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if(file) {
+                 // Even local files can be generated into quick object URLs to test the API method!
+                 const localUrl = URL.createObjectURL(file);
+                 avatar.speakFromUrl(localUrl);
+            }
+        });
     });
-
   </script>
 </body>
 </html>
